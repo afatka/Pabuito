@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+	Avoid using quot marks "" or '', Greater than/less than >< , and ampersands &
+	-->
+<grade_tool>
+	<naming_convention>lastname_firstname_MCR_ProjectComponentProjNum_yearMonth.mb</naming_convention>
+	<category title = 'Art'>
+		<title>Art</title>
+		<weight>70</weight>
+		<subcategory title = 'Shape/Silho'>
+			<title>Shape/Silho</title>
+			<weight>40</weight>
+			<gradeValue>
+				<A>All required objects are specific and faithful to reference. Excellent attention to the varied softness or sharpness of edges on objects compared to reference.</A>
+				<F>Few or hardly any objects are specific and faithful to reference; feel generic.   Poor attention to the varied softness or sharpness of edges on objects compared to reference.   Missing bevels on objects which still feel like block-ins in most of scene. </F>
+			</gradeValue>
+		</subcategory>
+		<subcategory title = 'Prop/Scale' weight = '40'>
+			<title>Prop/Scale</title>
+			<weight>40</weight>
+			<gradeValue>
+				<A>All size relationships of object parts and scene objects are believable or faithful to reference.</A>
+				<F>Few or hardy any size relationships of object parts and and scene objects are believeable or faithful to reference. </F>
+			</gradeValue>
+		</subcategory>
+	</category>
+	<category title='Tech'>
+		<title>Tech</title>
+		<weight>10</weight>
+		<subcategory title = 'Built in Pieces'>
+			<title>BIP</title>
+			<weight>100</weight>
+			<gradeValue>
+				<A>All appropriate objects created with criteria of different materials, construction methods or visible seams justifying separate pieces.</A>
+				<F>Hardly any appropriate objects created with criteria of different materials, construction methods or visible seams justifying separate pieces. Lots of block or brick modeling. </F>
+			</gradeValue>
+		</subcategory>
+	</category>
+</grade_tool>

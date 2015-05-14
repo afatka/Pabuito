@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+	Avoid using quot marks "" or '', Greater than/less than >< , and ampersands &
+	-->
+<grade_tool>
+
+	<category>
+		<title>Art</title>
+		<weight>70</weight>
+		<subcategory>
+			<title>TestSubCat</title>
+			<weight>05</weight>
+			<gradeComment>
+				<A>Greatz </A>
+				<C>Okayest </C>
+				<F>Tears </F>
+			</gradeComment>
+			<!-- <auto>testScript</auto> -->
+		</subcategory>
+		<subcategory>
+			<title>Shape/Silho</title>
+			<weight>10</weight>
+			<gradeComment>
+				<A>All required objects are specific and faithful to reference. Excellent attention to the varied softness or sharpness of edges on objects compared to reference. </A>
+				<C>Most of required objects are specific and faithful to reference. Very Good attention to the varied softness or sharpness of edges on objects compared to reference. </C>
+				<F>Few or hardly any objects are specific and faithful to reference; feel generic.   Poor attention to the varied softness or sharpness of edges on objects compared to reference.   Missing bevels on objects which still feel like block-ins in most of scene. </F>
+			</gradeComment>
+			<auto></auto>
+		</subcategory>
+	</category>
+
+	<category>
+		<title>Tech</title>
+		<weight>30</weight>
+		<subcategory title = 'Built in Pieces'>
+			<title>BIP</title>
+			<weight>100</weight>
+			<gradeComment>
+				<A>All appropriate objects created with criteria of different materials, construction methods or visible seams justifying separate pieces.</A>
+				<F>Hardly any appropriate objects created with criteria of different materials, construction methods or visible seams justifying separate pieces. Lots of block or brick modeling. </F>
+			</gradeComment>
+		</subcategory>
+		<!-- <subcategory title = 'test Tech 1'>
+			<title>TT1</title>
+			<weight>30</weight>
+			<gradeComment>
+				<A>TT1 A comment</A>
+				<F>TT1 F comment </F>
+			</gradeComment>
+		</subcategory> -->
+	</category>
+
+
+	<defaults>
+		<auto>True</auto>
+		<!--
+			keywords for naming convention are projNum (replaced with an integer [01])
+			and yearMonth (replaced with 4 digit code (2 digit year, 2 digit month))
+		-->
+		<naming_convention>lastname_firstname_MCR_ProjectComponentProjNum_yearMonth.mb</naming_convention>
+		<highnote_intro></highnote_intro>
+		<comment_intro></comment_intro>
+		<default_comment_intro></default_comment_intro>
+		<example_object_intro>Examples of concerns in this section are: </example_object_intro>
+		<late_intro>Late deduction:</late_intro>
+		<total_intro>Grade Total:</total_intro>
+		<gradeValue>
+			<Aplus>100</Aplus>
+			<A>92</A>
+			<Bplus>89</Bplus>
+			<B>84</B>
+			<Cplus>79</Cplus>
+			<C>75</C>
+			<D>72</D>
+			<F>60</F>
+			<F->0</F->
+		</gradeValue>
+		<!-- The named in the gradeEquation markup MUST be the first three (3) letters of the associated section.  The string 'Late' may be used to calculate the late grade influence that is built into the grading plateform. -->
+		<gradeEquation>(Art)+(Tec) - Late</gradeEquation>
+	</defaults>
+
+</grade_tool>
