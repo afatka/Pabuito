@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- 
+Pabuito Grading System grading document for 3DF Online Prop Assignment. 
+Document created May, 2015
+
+Created by Adam Fatka: adam.fatka@gmail.com
+ -->
+
+
+<!--
+	Avoid using quot marks "" or '', Greater than/less than >< , and ampersands &
+	-->
+
+<grade_tool>
+	<category title = 'One' weight = '15'>
+		<subcategory title = 'subcat2' weight = '33'>
+			<gradeComment>
+				<A>A Comment </A>
+				<B>B Comment</B>
+				<C>C Comment</C>
+				<F>F Comment</F>
+			</gradeComment>
+			<RMB title = 'RMB Comment'>Comment Text</RMB>
+		</subcategory>
+
+		<subcategory title = 'subcat 2' weight = '33'>
+			<gradeComment>
+				<A>A Comment </A>
+				<B>B Comment</B>
+				<C>C Comment</C>
+				<F>F Comment</F>
+			</gradeComment>
+			<RMB title = 'RMB Comment'>Comment Text</RMB>
+		</subcategory>
+		
+	</category>
+
+	<category title = 'Two' weight = '15'>
+		<subcategory title = 'subcat2' weight = '33'>
+			<gradeComment>
+				<A>A Comment </A>
+				<B>B Comment</B>
+				<C>C Comment</C>
+				<F>F Comment</F>
+			</gradeComment>
+			<RMB title = 'RMB Comment'>Comment Text</RMB>
+		</subcategory>
+
+		<subcategory title = 'subcat 2' weight = '33'>
+			<gradeComment>
+				<A>A Comment </A>
+				<B>B Comment</B>
+				<C>C Comment</C>
+				<F>F Comment</F>
+			</gradeComment>
+			<RMB title = 'RMB Comment'>Comment Text</RMB>
+		</subcategory>
+		
+	</category>
+	
+	<grade_box title = 'Late'>Late deduction</grade_box>
+
+
+<defaults>
+		<auto>False</auto>
+		<!--
+			keywords for naming convention are projNum (replaced with an integer [01])
+			and yearMonth (replaced with 4 digit code (2 digit year, 2 digit month))
+		-->
+		<naming_convention>lastname_firstname_MCR_ProjectComponentProjNum_yearMonth.mb</naming_convention>
+		<incomplete>Project does not meet minimum project requirements in order to be complete. Please review project requirements and meet with an instructor for further information.</incomplete>
+		<highnote_intro></highnote_intro>
+		<comment_intro></comment_intro>
+		<default_comment_intro></default_comment_intro>
+		<example_object_intro>Examples of concerns in this section are: </example_object_intro>
+		<late_intro>Late deduction:</late_intro>
+		<total_intro>Grade Total:</total_intro>
+		<gradeValue>
+			<Aplus>100</Aplus>
+			<A>92</A>
+			<Bplus>89</Bplus>
+			<B>84</B>
+			<Cplus>79</Cplus>
+			<C>75</C>
+			<D>72</D>
+			<F>60</F>
+			<F->0</F->
+		</gradeValue>
+		<!-- The named in the gradeEquation markup MUST be the first three (3) letters of the associated section.  The string 'Late' may be used to calculate the late grade influence that is built into the grading plateform. -->
+		<gradeEquation>(One)+(Two) - Late</gradeEquation>
+	</defaults>
+</grade_tool>

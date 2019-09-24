@@ -7,7 +7,9 @@ It includes all class attributes required to retrieve and load grading attribute
 """
 
 import maya.cmds as cmds
+# import maya.utils
 import xml.etree.ElementTree as et
+import re, sys
 class  SubcategoryGradeSection(object):
 
 	def __init__(self, subcategoryFromXML, defaultsFromXML, updateFunction, runAuto):
@@ -25,6 +27,7 @@ class  SubcategoryGradeSection(object):
 		self.current_comment_text = ''
 		self.current_default_comment_text = ''
 		self.current_example_comment_text = ''
+		self.auto_flagged_list = []
 		self.is_complete = False
 
 		self.subcatXML = subcategoryFromXML
@@ -33,57 +36,98 @@ class  SubcategoryGradeSection(object):
 		self.grade_values = defaultsFromXML.find('gradeValue')
 		self.log('grade_values: %s' % self.grade_values)
 
+		self.title = self.subcatXML.get('title')
+		if self.title == None:
+			self.title = self.subcatXML.find('title').text
 
-		self.title = self.subcatXML.find('title').text
-		self.log('section title: %s' % self.title)
+		self.weight = self.subcatXML.get('weight')
+		if self.weight == None:
+			self.weight = self.subcatXML.find('weight').text
 
-		self.weight = self.subcatXML.find('weight').text
-		self.log('section weight: %s' % self.weight)
+		# self.title = self.subcatXML.find('title').text
+		# self.log('section title: %s' % self.title)
+
+		# self.weight = self.subcatXML.find('weight').text
+		# self.log('section weight: %s' % self.weight)
 
 		try: 
 			self.auto = self.subcatXML.find('auto').text
 		except AttributeError: 
 			self.auto = ''
 
+		self.rmb = []
+		if self.subcatXML.findall('RMB'):
+			for item in self.subcatXML.findall('RMB'):
+				self.rmb.append([item.get('title'), item.text])
+
+		self.log('\nRiGHT HERE!')
+		if self.rmb != []:
+			for item in self.rmb:
+				self.log('\nTitle: {}\n{}'.format(item[0], item[1]))
+		self.log('RMB: {}'.format(self.rmb))
+		
 		self.log('starting subcategory GUI')
 		self.subcat_main_column_layout = cmds.columnLayout(columnWidth = subcategory_width, rowSpacing = row_spacing)#sub cat main column columnLayout
 		self.titleText = cmds.text(label = self.title, align = 'left')
 		if self.auto != '':
 			cmds.popupMenu(parent = self.titleText, button = 3)
 			cmds.menuItem(label = 'Run Auto', command = lambda *args: self.runAuto(self.subcatXML, self, auto = True))
+			cmds.menuItem(label = 'Select Flagged', command = lambda *args: self.select_flagged())
 		self.int_field_slider_row_layout = cmds.rowLayout(numberOfColumns = 2)#int_field_slider_row_layout
 		self.grade_intField = cmds.intField( minValue=0, maxValue=150, step=1 , width = subcategory_width/6, changeCommand = lambda *args: self.update_subcategory('intField', *args))
 		self.grade_slider = cmds.intSlider( min=-100, max=0, value=0, step=1, width = subcategory_width*5/6, changeCommand = lambda *args: self.update_subcategory('slider', *args), dragCommand = lambda *args: self.update_subcategory('slider', *args))
 		cmds.setParent('..')
 		self.radio_creator(self.subcatXML.find('gradeComment'))
 		self.log('radios created, starting comment frames')
-		self.subcat_comments_frame_layout = cmds.frameLayout( label='Comments', borderStyle='out', collapsable = True, collapse = True, width = subcategory_width)
+		self.subcat_comments_frame_layout = cmds.frameLayout( label='Comments', collapsable = True, collapse = True, width = subcategory_width)
 		self.comments_text_field = cmds.scrollField(width = subcategory_width, height = scrollField_height, wordWrap = True,  changeCommand = lambda *args: self.update_subcategory('comments_text', *args))
+
+		self.rmb_menu = cmds.popupMenu(parent = self.comments_text_field, button = 3)
+			# i = 0
+		if self.rmb != []:
+			for item in self.rmb:
+				self.log('{}:{}'.format(item[0], item[1]))
+				cmds.menuItem(label = item[0], command = lambda args, i = item[1]:self.add_comment_to_comments(i))
+				# i += 1
+		cmds.menuItem(label = 'Append session comment', command = lambda *args: self.append_session_commment())
+
 		cmds.button(label = 'Add Selected to Examples', width = subcategory_width, command = lambda *args: self.add_selected_to_examples(*args))
-		self.example_frameLayout = cmds.frameLayout( label='Example Objects', borderStyle='out', collapsable = True, collapse = True, width = subcategory_width)
+		self.example_frameLayout = cmds.frameLayout( label='Example Objects', collapsable = True, collapse = True, width = subcategory_width)
 		self.example_comments = cmds.scrollField(width = subcategory_width, height = scrollField_height, wordWrap = True, changeCommand = lambda *args: self.update_subcategory('example_comments_text', *args))
 		cmds.setParent('..')
-		self.default_comments_frameLayout = cmds.frameLayout( label='Default Comments', borderStyle='out', collapsable = True, collapse = True, width = subcategory_width)
+		self.default_comments_frameLayout = cmds.frameLayout( label='Default Comments', collapsable = True, collapse = True, width = subcategory_width)
 		self.default_comments = cmds.scrollField(width = subcategory_width, height = scrollField_height, wordWrap = True, changeCommand = lambda *args: self.update_subcategory('default_comments_text', *args))
 		cmds.setParent('..')
 		cmds.setParent('..')
 
 		cmds.setParent('..')
+
+	def select_flagged(self):
+		self.log('select flagged!')
+		if len(self.auto_flagged_list) == 0:
+			cmds.warning('No objects in flagged list')
+		else:
+			self.log('selecting objects')
+			cmds.select(self.auto_flagged_list)
+			self.log('objects selected')
 		
 	def radio_creator(self, gradeComments):
 		"""
 		take the gradeComments element from the xml and create radio buttons labeled correctly
 		"""
 		labels = []
-		self.log('gradeComments are: %s' % gradeComments)
+		# self.log('gradeComments are: %s' % gradeComments)
 		for label in gradeComments:
 			labels.append(label)
-			self.log('appending label: %s' % label)
-		self.log('labels: %s' % labels)
+			# self.log('appending label: %s' % label)
+		# self.log('labels: %s' % labels)
 		cmds.rowLayout(numberOfColumns = len(labels)+1)
 		self.grade_radio_collection = cmds.radioCollection()
 		for label in labels:
-			cmds.radioButton(label = label.tag, changeCommand = lambda *args: self.update_subcategory('radioButton', *args))
+			self.log('processing label: {}'.format(label.tag))
+			tag = re.sub('plus', '+', label.tag)
+			self.log('processed label: {}\n'.format(tag))
+			cmds.radioButton(label = tag, changeCommand = lambda *args: self.update_subcategory('radioButton', *args), width = 30)
 
 		##
 		##
@@ -92,6 +136,10 @@ class  SubcategoryGradeSection(object):
 		##
 		cmds.setParent('..')
 		cmds.setParent('..')
+
+	def gutCheck_update(self, intValue, *args):
+		cmds.intField(self.grade_intField, edit = True, value = intValue)
+		self.update_subcategory('intField')
 
 	def update_subcategory(self, control_type, *args):
 		"""
@@ -129,6 +177,7 @@ class  SubcategoryGradeSection(object):
 			self.log('query radio collection and update others')
 			selected = cmds.radioCollection(self.grade_radio_collection, query = True, select = True)
 			selected_letter = cmds.radioButton(selected, query = True, label = True)
+			selected_letter = re.sub('\\+', 'plus', selected_letter)
 			self.log('selected radioButton: %s' % selected_letter)
 
 			self.current_grade_value = int(self.grade_values.find(selected_letter).text)
@@ -150,7 +199,6 @@ class  SubcategoryGradeSection(object):
 			self.log(self.current_default_comment_text)
 			self.update_is_complete()
 
-			
 		elif control_type is 'example_comments_text':
 			self.current_example_comment_text = cmds.scrollField(self.example_comments, query = True, text = True)
 			self.log('examples updated')
@@ -178,9 +226,14 @@ class  SubcategoryGradeSection(object):
 						break
 			if do_break:
 				break
+
+		grade_value_letter = re.sub('plus', '+', grade_value_letter)
 		radioButtons = cmds.radioCollection(self.grade_radio_collection, query = True, collectionItemArray = True)
+		# print('grade_value_letter: {}'.format(grade_value_letter))
 		for butn in radioButtons:
+			# print('radio button to test: {}'.format(cmds.radioButton(butn, query=True, label = True)))
 			if cmds.radioButton(butn, query=True, label = True) == grade_value_letter:
+				# print('they match... should have selected it...?')
 				cmds.radioButton(butn, edit = True, select = True)
 
 	def update_default_comments(self):
@@ -197,12 +250,96 @@ class  SubcategoryGradeSection(object):
 				selected_letter = cmds.radioButton(butn, query = True, label = True)
 				break
 		if selected_letter == '':
-			cmds.error('selected_letter not set')
+			cmds.error('selected_letter not set.\n{}\nGrade Value: {}\n\n'.format(self.title, self.current_grade_value))
+
+		# print('selected letter: {}'.format(selected_letter))
+		if '+' in selected_letter:
+			# print('plus detected!')
+			# selected_letter = re.sub('+', 'plus', selected_letter)
+			selected_letter = selected_letter.replace('+', 'plus')
+			# print('new selected_letter: {}'.format(selected_letter))
 		cmds.scrollField(self.default_comments, edit = True, text = self.subcatXML.find('gradeComment').find(selected_letter).text)
 
 		self.current_default_comment_text = cmds.scrollField(self.default_comments, query = True, text = True)
 		self.log('Default Comments Updated')
 		self.log(self.current_default_comment_text)
+
+	def append_session_commment(self):
+		self.log('append session comment stuff')
+
+		def close_command(*args):
+			self.log('close command')
+			# maya.utils.executeDeferred("cmds.deleteUI('ASCW')")
+
+		def get_comment(*args):
+			self.log('get comment')
+			title = cmds.textField(comment_title, query = True, text = True)
+			comment = cmds.scrollField(comment_text, query = True, text = True)
+			self.log('\nTitle: {}\nComment: {}'.format(title, comment))
+			if title != 'Comment Title' and comment != 'Type your comment text here...':
+				cmds.menuItem(parent = self.rmb_menu, label = title, command = lambda args, i = comment:self.add_comment_to_comments(i))
+				cmds.deleteUI('ASCW')
+				reorder_comments()
+			else:
+				cmds.error('Type in a comment title and comment text to continue.\nClose the window to cancel.')
+			self.add_comment_to_comments(comment)
+
+		def reorder_comments(*args):
+			self.log('reorder comments')
+			comment_items = cmds.popupMenu(self.rmb_menu, query = True, itemArray = True)
+			comment_items[-1], comment_items[-2] = comment_items[-2], comment_items[-1]
+			comment_labels_commands = []
+			for i in comment_items:
+				l = cmds.menuItem(i, query = True, label = True)
+				c = cmds.menuItem(i, query = True, command = True)
+				comment_labels_commands.append((l,c))
+			cmds.popupMenu(self.rmb_menu, edit = True, deleteAllItems = True)
+			for i in comment_labels_commands:
+				cmds.menuItem(label = i[0], command = i[1], parent = self.rmb_menu)
+
+
+
+		self.log('make comment window')
+		window_widthHeight = (250, 200)
+		padding = 2
+
+		#if ASCW window exists delete it
+		if (cmds.window('ASCW', exists = True)):
+			cmds.deleteUI('ASCW')
+
+		comment_window = cmds.window('ASCW', title = 'Append Session Comment', 
+									width = window_widthHeight[0], 
+									height = window_widthHeight[1],
+									closeCommand = close_command)
+		comment_form = cmds.formLayout(numberOfDivisions = 250)
+		comment_title = cmds.textField(text = 'Comment Title')
+		comment_text = cmds.scrollField(editable = True, wordWrap = True, text = 'Type your comment text here...')
+		comment_btn = cmds.button(label = 'Append Comment', command = get_comment)
+		cmds.setParent('..')
+
+		cmds.formLayout(comment_form, edit = True, attachForm = [
+			(comment_title, 'left', padding),
+			(comment_title, 'right', padding),
+			(comment_title, 'top', padding),
+			(comment_text, 'left', padding),
+			(comment_text, 'right', padding),
+			(comment_btn, 'left', padding), 
+			(comment_btn, 'right', padding), 
+			(comment_btn, 'bottom', padding)], 
+			attachControl = [
+			(comment_text, 'top', padding, comment_title),
+			(comment_text, 'bottom', padding, comment_btn)])
+		cmds.showWindow(comment_window)
+	 
+	def add_comment_to_comments(self, comment, *args):
+		self.log('add comment to comments')
+		text_bucket = cmds.scrollField(self.comments_text_field, query = True, text = True)
+		# self.log('index: {}'.format(index))
+		self.log('RMB: {}'.format(self.rmb))
+		text_bucket += ' {}'.format(comment)
+		cmds.scrollField(self.comments_text_field, edit = True, text = text_bucket)
+
+		self.update_subcategory('comments_text')
 
 	def add_selected_to_examples(self, *args):
 		"""
@@ -248,10 +385,10 @@ class  SubcategoryGradeSection(object):
 			'section_title': self.title, 
 			'section_weight': self.weight,
 			'grade_value' : self.current_grade_value,
-		 	'comment_text' : self.current_comment_text,
-		  	'default_comments_text' : self.current_default_comment_text,
-		  	'example_comments_text' : self.current_example_comment_text,
-		  	'is_complete': self.is_complete
+			'comment_text' : self.current_comment_text,
+			'default_comments_text' : self.current_default_comment_text,
+			'example_comments_text' : self.current_example_comment_text,
+			'is_complete': self.is_complete
 		}
 
 		return return_dict
@@ -260,6 +397,7 @@ class  SubcategoryGradeSection(object):
 		"""
 		take an input dictionary and populate all the grade fields accordingly
 		"""
+
 		cmds.intField(self.grade_intField, edit = True, value = grade_to_set['grade_value'])
 		self.update_subcategory('intField')
 		if grade_to_set['grade_value'] is not '':
@@ -271,6 +409,9 @@ class  SubcategoryGradeSection(object):
 		if grade_to_set['example_comments_text'] is not '':
 			cmds.scrollField(self.example_comments, edit = True, text = grade_to_set['example_comments_text'])
 			self.update_subcategory('example_comments_text')
+
+		self.auto_flagged_list = grade_to_set.get('examples', [])
+		self.log('auto_flagged_list updated: \n{}'.format(self.auto_flagged_list))
 
 	def reset(self):
 		cmds.intField(self.grade_intField, edit = True, value = 0)
@@ -297,6 +438,12 @@ class  SubcategoryGradeSection(object):
 		self.current_example_comment_text = cmds.scrollField(self.example_comments, query = True, text = True)
 		self.current_comment_text = cmds.scrollField(self.comments_text_field, query = True, text = True)
 
+	def disable(self):
+		cmds.columnLayout(self.subcat_main_column_layout, edit = True, enable = False)
+
+	def enable(self):
+		cmds.columnLayout(self.subcat_main_column_layout, edit = True, enable = True)
+
 	def log(self, message, prefix = '.:subcategory_class::', hush = True):
 		"""
 		print stuff yo!
@@ -317,28 +464,71 @@ class MainCategoryGradeSection(object):
 
 		self.updatePGS = updateFunction
 
+
 		self.log("Main Category Initializing")
 		self.maincategory = mainCategoryFromXML
 		self.defaults = defaultsFromXML
-		self.title = self.maincategory.find('title').text
-		self.weight = self.maincategory.find('weight').text
+
+		self.log('\n\nGutCheck:')
+		self.gutCheck = None
+		
+		if self.maincategory.find('gutCheck') is not None:
+			self.gutCheck = self.maincategory.find('gutCheck').text
+		self.log('{}\n\n'.format(self.gutCheck))
+
+		self.rmb = []
+		if self.maincategory.findall('RMB'):
+			for item in self.maincategory.findall('RMB'):
+				self.rmb.append([item.get('title'), item.text])
+
+		self.log('\nRiGHT HERE!')
+		if self.rmb != []:
+			for item in self.rmb:
+				self.log('\nTitle: {}\n{}'.format(item[0], item[1]))
+		self.log('RMB: {}'.format(self.rmb))
+		
+		self.title = self.maincategory.get('title')
+		if self.title == None:
+			self.title = self.maincategory.find('title').text
+
+		self.weight = self.maincategory.get('weight')
+		if self.weight == None:
+			self.weight = self.maincategory.find('weight').text
+			
+		# self.title = self.maincategory.find('title').text
+		# self.weight = self.maincategory.find('weight').text
 		self.log('{} Category Weight: {}'.format(self.title, self.weight))
 		self.maincat_main_column_layout = cmds.columnLayout(columnWidth = maincategory_width, rowSpacing = row_spacing, enable = False)#main cat main column columnLayout
-		self.mainFrameLayout = cmds.frameLayout(label = 'High Notes', borderStyle = 'out', collapsable = True, collapse = True, width = maincategory_width)
+		self.mainFrameLayout = cmds.frameLayout(label = 'High Notes',collapsable = True, collapse = True, width = maincategory_width)
+		if self.gutCheck == 'True':
+			self.log('running gut check GUI stuff')
+			self.gutCheckFrameLayout = cmds.frameLayout(label = 'Gut Check', collapsable = True, collapse = True, width = maincategory_width)
+			self.gutCheckWindowGo()
+			cmds.setParent(self.mainFrameLayout)
+
 		self.highnote_comments = cmds.scrollField(width = maincategory_width, height = scrollField_height, wordWrap = True, changeCommand = lambda *args: self.update_maincategory('highnotes', *args))
+
+		self.rmb_menu = cmds.popupMenu(parent = self.highnote_comments, button = 3)
+			# i = 0
+		if self.rmb != []:
+			for item in self.rmb:
+				self.log('{}:{}'.format(item[0], item[1]))
+				cmds.menuItem(label = item[0], command = lambda args, i = item[1]:self.add_comment_to_comments(i))
+				# i += 1
+		cmds.menuItem(label = 'Append session comment', command = lambda *args: self.append_session_commment())
+
 		cmds.setParent(self.mainFrameLayout)
 		cmds.setParent(self.maincat_main_column_layout)
 
-
 		subcatColumnLayout = cmds.columnLayout()
 		self.subcategories = []#this will be the subcategory object
-		self.log('maincategory: %s' % self.maincategory.find('title').text)
+		# self.log('maincategory: %s' % self.maincategory.find('title').text)
 		self.log('main category title: %s' % self.title)
 		self.subcats = self.maincategory.findall('subcategory') #this is the xml subcategory
 		self.log('subcategories found: %s' % self.subcats)
-		for subc in self.subcats:
-			self.log('subcat: %s' % subc)
-			self.log('title: %s' % subc.find('title').text)
+		# for subc in self.subcats:
+		# 	self.log('subcat: %s' % subc)
+		# 	self.log('title: %s' % subc.find('title').text)
 
 		
 		for sub in self.subcats:
@@ -348,20 +538,146 @@ class MainCategoryGradeSection(object):
 		
 		cmds.setParent(self.maincat_main_column_layout)
 
+	def append_session_commment(self):
+		self.log('append session comment stuff')
+
+		def close_command(*args):
+			self.log('close command')
+			# maya.utils.executeDeferred("cmds.deleteUI('ASCW')")
+
+		def get_comment(*args):
+			self.log('get comment')
+			title = cmds.textField(comment_title, query = True, text = True)
+			comment = cmds.scrollField(comment_text, query = True, text = True)
+			self.log('Title: {}\nComment: {}'.format(title, comment))
+			if title != 'Comment Title' and comment != 'Type your comment text here...':
+				cmds.menuItem(parent = self.rmb_menu, label = title, command = lambda args, i = comment:self.add_comment_to_comments(i))
+				cmds.deleteUI('ASCW')
+			else:
+				cmds.error('Type in a comment title and comment text to continue.\nClose the window to cancel.')
+
+		self.log('make comment window')
+		window_widthHeight = (250, 200)
+		padding = 2
+
+		#if ASCW window exists delete it
+		if (cmds.window('ASCW', exists = True)):
+			cmds.deleteUI('ASCW')
+
+		comment_window = cmds.window('ASCW', title = 'Append Session Comment', 
+									width = window_widthHeight[0], 
+									height = window_widthHeight[1],
+									closeCommand = close_command)
+		comment_form = cmds.formLayout(numberOfDivisions = 250)
+		comment_title = cmds.textField(text = 'Comment Title')
+		comment_text = cmds.scrollField(editable = True, wordWrap = True, text = 'Type your comment text here...')
+		comment_btn = cmds.button(label = 'Append Comment', command = get_comment)
+		cmds.setParent('..')
+
+		cmds.formLayout(comment_form, edit = True, attachForm = [
+			(comment_title, 'left', padding),
+			(comment_title, 'right', padding),
+			(comment_title, 'top', padding),
+			(comment_text, 'left', padding),
+			(comment_text, 'right', padding),
+			(comment_btn, 'left', padding), 
+			(comment_btn, 'right', padding), 
+			(comment_btn, 'bottom', padding)], 
+			attachControl = [
+			(comment_text, 'top', padding, comment_title),
+			(comment_text, 'bottom', padding, comment_btn)])
+		cmds.showWindow(comment_window)
+	 
+	def add_comment_to_comments(self, comment, *args):
+		self.log('add comment to comments')
+		text_bucket = cmds.scrollField(self.highnote_comments, query = True, text = True)
+		# self.log('index: {}'.format(index))
+		self.log('RMB: {}'.format(self.rmb))
+		text_bucket += ' {}'.format(comment)
+		cmds.scrollField(self.highnote_comments, edit = True, text = text_bucket)
+
+		self.update_maincategory('highnotes')
+
 	def enable(self):
 		self.log('enable the section')
 		cmds.columnLayout(self.maincat_main_column_layout, edit = True, enable = True)
+		for sub in self.subcategories:
+			sub.enable()
 
 	def disable(self):
 		self.log('disable the section')
 		cmds.columnLayout(self.maincat_main_column_layout, edit = True, enable = False)
+		for sub in self.subcategories:
+			sub.disable()
+		self.log('did it work?')
+
+	def gutCheckGo(self, *args):
+		self.log('gut check')
+		self.disable()
+		self.gutCheckWindowGo()
+
+	def gutCheckWindowGo(self, *args):
+		self.log('gut check window')
+
+		elem_width = 200
+		row_spacing = 0
+		# self.gutCheckWindowElement = cmds.window(title = '{} Gut Check'.format(self.title), width = 215, height = 100, closeCommand = self.gutCheckCancel)
+
+		self.gutCheckWindow = cmds.columnLayout(columnWidth = elem_width, rowSpacing = row_spacing)
+		cmds.text(label = 'Gut Check Input', align = 'left')
+		
+		gutCheck_int_field_slider_row_layout = cmds.rowLayout(numberOfColumns = 2)#int_field_slider_row_layout
+		self.gutCheck_grade_intField = cmds.intField( minValue=0, maxValue=150, step=1 , width = elem_width/6, 
+			changeCommand = lambda *args: self.gutCheck_update('field'))
+		self.gutCheck_grade_slider = cmds.intSlider( min=-100, max=0, value=0, step=1, width = elem_width*5/6, changeCommand = lambda *args: self.gutCheck_update('slider'), dragCommand = lambda *args: self.gutCheck_update('slider'))
+		cmds.setParent('..')
+
+		cmds.button(label = 'Commit', command = self.gutCheckSet, width = elem_width)
+		cmds.setParent('..')
+		
+		# cmds.showWindow(self.gutCheckWindowElement)
+
+	def gutCheck_update(self, controlType):
+		self.log('gut check update')
+		if controlType == 'slider':
+			value = cmds.intSlider(self.gutCheck_grade_slider, query = True, value = True)
+			cmds.intField(self.gutCheck_grade_intField, edit = True, value = -value)
+		elif controlType == 'field':
+			value = cmds.intField(self.gutCheck_grade_intField, query = True, value = True)
+			cmds.intSlider(self.gutCheck_grade_slider, edit = True, value = -value)
+
+	def gutCheckSet(self, *args):
+		self.log('gut check set')
+		value = cmds.intField(self.gutCheck_grade_intField, query = True, value = True)
+		for sub in self.subcategories:
+			sub.gutCheck_update(value)
+		# cmds.deleteUI(self.gutCheckWindowElement)
+		# self.enable()
+		self.gutCheckReset()
+
+	def gutCheckReset(self, *args):
+		self.log('gut check reset!')
+		cmds.intField(self.gutCheck_grade_intField, edit = True, value = 0)
+		self.gutCheck_update('field')
+		cmds.frameLayout(self.gutCheckFrameLayout, edit = True, collapse = True)
+		cmds.frameLayout(self.mainFrameLayout, edit = True, collapse = True)
+
+	def gutCheckCancel(self, *args):
+		self.log('gut check cancel')
+		# cmds.deleteUI(self.gutCheckWindowElement)
+		self.enable()
 
 	def autoProGo(self):
 		self.log('defaults: {}'.format(self.defaults))
 		self.log('defaults.findall("auto"): {}'.format(self.defaults.findall('auto')[0]))
+		self.log('!!! autoText: {}'.format(self.defaults.findall('auto')[0].text))
 		if self.defaults.findall('auto')[0].text :
 			for sub in self.subcategories:
-				self.runAuto(self.defaults, sub)
+				try:
+					self.runAuto(self.defaults, sub)
+				except RuntimeError as e:
+					cmds.warning('Error running automation. Skipping section: {}\n{}'.format(sub.title, e))
+
 			self.updatePGS()
 
 	def runAuto(self, defaultsFromXML, single_subcat, auto = False):
@@ -372,20 +688,36 @@ class MainCategoryGradeSection(object):
 				self.log("Lets try")
 				self.log(defaultsFromXML.find('auto').text)
 				self.log('subcatXMLElement:')
-				self.log('subcat title: %s' % subcatXMLElement.find('title').text)
-				self.log(subcatXMLElement.find('auto').text)
+				sub_title1 = subcatXMLElement.get('title')
+				if sub_title1 == None:
+					sub_title1 = subcatXMLElement.find('title').text
+				self.log('subcat title: %s' % sub_title1) 
+				# self.log(subcatXMLElement.find('auto').text)
 				self.log("did those last two print?")
-				if (defaultsFromXML.find('auto').text == 'True') and (subcatXMLElement.find('auto').text != ''):
+				subcat_auto = None
+				if subcatXMLElement.find('auto') != None:
+					subcat_auto = subcatXMLElement.find('auto').text
+				if subcat_auto == '' or subcat_auto == None:
+					subcat_auto = False
+				if (defaultsFromXML.find('auto').text == 'True') and subcat_auto:
 					self.log('auto.text is %s' % subcatXMLElement.find('auto').text)
 					auto = True
-			except AttributeError:
-				self.log('AttributeError for Auto test')
+			except AttributeError as e:
+				self.log('AttributeError for Auto test: \n{}'.format(e))
+				# cmds.warning('AttributeError: {}'.format(sys.exc_info()[2].tb_lineno))
+				cmds.warning('AttributeError: {}: Line {}'.format(e,sys.exc_info()[2].tb_lineno))
 				pass
 
 		if auto:
+			self.log(subcatXMLElement.find('auto').text)
 			autoScriptName = subcatXMLElement.find('auto').text
 			self.log('auto is True!!!')
-			import auto as autoRun
+			import pabuito_auto as autoRun
+			# reload(autoRun)
+			# autoScripts = dir(autoRun)
+			folder_name = defaultsFromXML.find('auto').get('folder')
+			if folder_name != None:
+				autoRun = getattr(autoRun, folder_name)
 			autoScripts = dir(autoRun)
 			self.log('Methods in auto run are \n %s' % autoScripts)
 			defaultMethods = defaultsList = ['__builtins__', '__doc__', '__file__', '__name__', '__package__', '__path__']
@@ -396,17 +728,23 @@ class MainCategoryGradeSection(object):
 			self.log('autoScriptModules: %s' % autoScriptModules)
 			self.log('autoScriptName: %s' % autoScriptName)
 
+			# print('auoScriptModules:')
+			# for mod in autoScriptModules:
+			# 	print(mod)
+				
 			if autoScriptName in autoScriptModules:
 				self.log('Found AutoScript!')
-				returnDict = getattr(getattr(autoRun, autoScriptName), autoScriptName)()
+				returnDict = getattr(getattr(autoRun, autoScriptName), autoScriptName)(self.defaults)
 				self.log(returnDict)
-				returnDict['section_title'] = subcatXMLElement.find('title').text
+				sub_title = subcatXMLElement.get('title')
+				if sub_title == None:
+					sub_title = subcatXMLElement.find('title').text
+				returnDict['section_title'] = sub_title
 				self.log('section_title: %s' % returnDict['section_title'])
 				single_subcat.this_is_the_grade(returnDict)
-
-
 			else:
 				self.log('Failed to find autoScriptName')
+				cmds.warning('Failed to find autoScriptName: {}'.format(autoScriptName))
 
 		else:
 			self.log('FALSE FALSE FALSE')
@@ -461,17 +799,18 @@ class MainCategoryGradeSection(object):
 			for index in sectionGrades[4]:
 				if sub.title is index['section_title']:
 					sub.this_is_the_grade(index)
-		# self.log('Set grades for subcategories')
-		# # for sub in self.subcategories:
-		# # 	self.log('do some grade updating here')
-		# self.log("set dim grades y'all")
 
 	def are_you_complete(self):
+		incomplete_titles = []
 		for sub in self.subcategories:
 			self.log("Testing sub for complete-ness: %s" % sub.title)
 			if not sub.is_complete:
-				return False
-		return True
+				self.log('adding {} to incomplete_titles'.format(sub.title))
+				incomplete_titles.append(sub.title)
+				# return False
+		self.log('incomplete_titles: \n{}'.format(incomplete_titles))
+		return incomplete_titles
+		# return True
 	
 	def reset(self):
 		self.log('resetting main section')
@@ -480,6 +819,7 @@ class MainCategoryGradeSection(object):
 		# self.disable()
 		for sub in self.subcategories:
 			sub.reset()
+		self.update_maincategory('highnotes')
 		self.log('Main section {} reset'.format(self.title))
 
 	def log(self, message, prefix = '.:main_category_class::', hush = True):

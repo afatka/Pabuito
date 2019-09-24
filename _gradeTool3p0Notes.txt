@@ -1,0 +1,14 @@
+Grade Tool 3.0 Development notes?
+
+Grade tool should live independent of Maya
+
+Save grading progress at any time 
+
+save environment variables
+
+external file for grade letter/value relationship
+
+timing grade metrics (time to grade, time per A, time per F, etc)
+other grading metrics? (number of times each section is edited, time spent writing comments, etc)
+
+create graphs using Plotly Python API for class/grades/etc?

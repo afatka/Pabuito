@@ -26,9 +26,10 @@ class FileManager(object):
 		self.fileTypes = fileTypesToFind
 
 		#possibly make it work on windows as well? no testing done
-		if os.name == 'posix':
-			self.fileSeparator = '/'
-		else: self.fileSeparator = "\\"
+		# if os.name == 'posix':
+		# 	self.fileSeparator = '/'
+		# else: self.fileSeparator = "\\"
+		self.fileSeparator = os.sep
 
 		#declaration of variables
 		
@@ -45,7 +46,11 @@ class FileManager(object):
 		self.pathType = pathSelection#1 is singleSection, 2 is allSections
 
 		#ID working directory, make that directory functional
-		workingDirectory = cmds.fileDialog2(fileMode = 3, caption = 'Select Directory')[0] + self.fileSeparator
+		try: 
+			workingDirectory = cmds.fileDialog2(fileMode = 3, caption = 'Select Directory')[0] + self.fileSeparator
+		except TypeError:
+			cmds.error('Cancelled file add. Tool Stalled. ')
+		
 		self.log('working directory: {}'.format(workingDirectory))
 		self.workingDirectoryOSWalk = workingDirectory
 
@@ -122,6 +127,15 @@ class FileManager(object):
 			i += 1
 			i2 += 1
 
+	def skip_current(self, *args):
+		self.log('skip_current activated')
+		original_selected = cmds.textScrollList(self.incompleteFilesScrollList, query = True, selectItem = True)
+		top_file = cmds.textScrollList(self.incompleteFilesScrollList, edit = True, selectIndexedItem = 1)
+		self.send_to_last()
+		if original_selected != None:
+			for item in original_selected:
+				cmds.textScrollList(self.incompleteFilesScrollList, edit = True, selectItem = item)
+
 	def send_to_last(self, *args):
 		self.log('send selection to last')
 		currentSelection = cmds.textScrollList(self.incompleteFilesScrollList, query = True, selectItem = True)
@@ -172,7 +186,7 @@ class FileManager(object):
 			pickleDirectory = workingDirectory
 		else:
 			pickleDirectory = currentFileWPath.rsplit(self.fileSeparator,1)[0] + self.fileSeparator
-			workingDirectory += '_gradeFiles' + self.fileSeparator
+			workingDirectory += '_Grade_Docs' + self.fileSeparator
 		return {'filename' : currentFilename, 'textDirectory' : workingDirectory, 'pickleDirectory' : pickleDirectory}
 
 	def is_last_file(self):
@@ -229,7 +243,16 @@ class FileManager(object):
 		return directoryList
 
 	def fileFinderOSWalk(self, *args):
+		directoryDepth = 0
+		maximum_recursion = 8
+
 		for directoryName, subDirectoryName, fileList in os.walk(self.workingDirectoryOSWalk):
+			if directoryDepth == 0:
+				directoryDepth = len(directoryName.split(self.fileSeparator))
+			if len(directoryName.split(self.fileSeparator)) - directoryDepth >= maximum_recursion:
+				print('os.walk recursion break triggered')
+				break
+			
 			for item in fileList:
 				if item.endswith(self.fileTypes):
 					self.log('directory name is: {}'.format(directoryName))
@@ -239,42 +262,6 @@ class FileManager(object):
 					else:
 						fileToAdd = directoryName + self.fileSeparator + item
 					self.foundFiles.append(fileToAdd)
-
-	# def fileFinder(self):
-	# 	if self.pathType == 2:
-	# 		# self.log('pathType is allSections')
-	# 		for item in self.directoryContentPaths:
-	# 			# self.log('looking in directoryContentPaths at {}'.format(item))
-	# 			# self.log('os.path.isdir = {}'.format(os.path.isdir(item)))
-	# 			if os.path.isdir(item):
-	# 				# self.log('{} is a directory'.format(item))
-	# 				tempContents = self.stripFiles(os.listdir(item))
-	# 				# self.log('capturing dir contents: {}'.format(tempContents))
-	# 				tempContentsPaths = []
-	# 				for content in tempContents:
-	# 					tempContentsPaths.append(item + self.fileSeparator + content)
-	# 				# self.log('tempContentsPaths: {}'.format(tempContentsPaths))
-	# 				for newItem in tempContentsPaths:
-	# 					# self.log('looking at path: {}'.format(newItem))
-	# 					# self.log('os.path.isdir: {}'.format(os.path.isdir(newItem)))
-	# 					if os.path.isdir(newItem):
-	# 						# self.log('os.isdir: True - {}'.format(newItem))
-	# 						tempContents2 = self.stripFiles(os.listdir(newItem))
-	# 						for fileItem in tempContents2:
-	# 							if fileItem.endswith(self.fileTypes):
-	# 								self.foundFiles.append(newItem + self.fileSeparator + fileItem)
-	# 								# self.log('Maya File Added to List: {}'.format(fileItem))
-
-	# 	if self.pathType == 1:
-	# 		# self.log('pathType is singleSection')
-	# 		for item in self.directoryContentPaths:
-	# 			# self.log('looking at: {}'.format(item))
-	# 			if os.path.isdir(item):
-	# 				tempContents = self.stripFiles(os.listdir(item))
-	# 				for fileItem in tempContents:
-	# 					if fileItem.endswith(self.fileTypes):
-	# 						self.foundFiles.append(item + self.fileSeparator + fileItem)
-
 
 	def findPicklesFile(self, picklesFileDict):
 		self.log('pickles file name is: {}'.format(picklesFileDict['filename']))
@@ -333,7 +320,7 @@ class FileManager(object):
 			if cmds.confirmDialog( title='Confirm Removal,\n Are you sure?', message=removalString, button=['Remove File','Cancel'], defaultButton='Remove File', cancelButton='Cancel', dismissString='No' ) == 'Remove File':
 				for item in selected:
 					self.log('removing file: {}'.format(item))
-					if item in incompleteFilesSelected:
+					if incompleteFilesSelected != None and item in incompleteFilesSelected:
 						cmds.textScrollList(self.incompleteFilesScrollList, edit = True, removeItem = item)
 					else:
 						cmds.textScrollList(self.completeFilesScrollList, edit = True, removeItem = item)
@@ -361,6 +348,48 @@ class FileManager(object):
 		cmds.button(self.markAsIncompleteButton , edit = True, enable = False)
 		cmds.button(self.markAsCompleteButton , edit = True, enable = False)
 
+	def pickle_filter(self, *args):
+		self.log('Pickle Filter')
+		#if anything is already selected collect it
+		orig_selected = cmds.textScrollList(self.incompleteFilesScrollList, query = True, selectItem = True)
+		cmds.textScrollList(self.incompleteFilesScrollList, edit = True, deselectAll = True)
+
+		#collect files from incomplete list
+		incompleteFilesTempList = cmds.textScrollList(self.incompleteFilesScrollList, query = True, allItems = True)
+
+		#Select those items so we can get the unique tags / file path
+		for fileItem in incompleteFilesTempList:
+			cmds.textScrollList(self.incompleteFilesScrollList, edit = True, selectItem = fileItem)
+
+		# Get unique tag / file path
+		incompleteFilesSelectedUniqueTags = cmds.textScrollList(self.incompleteFilesScrollList, query = True, selectUniqueTagItem = True)
+		cmds.textScrollList(self.incompleteFilesScrollList, edit = True, deselectAll = True)
+		
+		# Combine into a single list for managability
+		file_info_list = zip(incompleteFilesTempList, incompleteFilesSelectedUniqueTags)
+
+		# If a file of the same name but with a .pgs type exists, add it to a list
+		files_to_remove = []
+		for f in file_info_list:
+			# print(f[1])
+			pgs = f[1] + '.pgs'
+			print('pgs:{}: {}'.format(os.path.isfile(pgs), pgs ))
+			if os.path.isfile(pgs):
+				files_to_remove.append(f)
+
+		# Select files in the list
+		for f in files_to_remove:
+			cmds.textScrollList(self.incompleteFilesScrollList, edit = True, selectItem = f[0])
+
+		# Mark them as complete
+		self.markAsComplete()
+
+		#restore original selection
+		if orig_selected != None:
+			cmds.textScrollList(self.incompleteFilesScrollList, edit = True, deselectAll = True)
+			for item in original_selected:
+				cmds.textScrollList(self.incompleteFilesScrollList, edit = True, selectItem = item)
+
 	def fileManagerGUI(self):
 		"""
 		Stand alone GUI element. Single UI Parent required to return
@@ -372,7 +401,7 @@ class FileManager(object):
 		buttonWidth = 102
 		if doWindow:
 			cmds.window(width = scrollListWidth)
-		self.fileManagerFormLayout = cmds.formLayout('fileManager Form Layout', numberOfDivisions = 200)
+		self.fileManagerFormLayout = cmds.formLayout('fileManager Form Layout', numberOfDivisions = 200, width = 220)
 		self.addFileButton = cmds.button(label = 'Add File +', command = lambda *args: self.runFileManager(1), width = buttonWidth)
 		# addFilePopupMenu = cmds.popupMenu(parent = self.addFileButton, button = 3)
 		# cmds.menuItem(label = 'Add Section +', command = lambda *args: self.runFileManager(1))
@@ -383,8 +412,9 @@ class FileManager(object):
 		cmds.popupMenu(parent = self.incompleteFilesScrollList, button = 3)
 		cmds.menuItem(label = 'Grade Next', command = self.grade_next)
 		cmds.menuItem(label = 'Send to Bottom', command = self.send_to_last)
+		cmds.menuItem(label = 'Pickle Filter', command = self.pickle_filter)
 		fieldSeparator2 = cmds.separator()
-		self.markAsCompleteButton = cmds.button(label = u'Mark as Done v', command = self.markAsComplete, width = buttonWidth)
+		self.markAsCompleteButton = cmds.button(label = 'Mark as Done v', command = self.markAsComplete, width = buttonWidth)
 		self.markAsIncompleteButton = cmds.button(label = '^ Add to Queue', command = self.markAsIncomplete, width = buttonWidth)
 		fieldSeparator3 = cmds.separator()
 		self.completeFilesScrollList = cmds.textScrollList(numberOfRows=10, allowMultiSelection=True, width = scrollListWidth, height = scrollListHeight, font = "smallObliqueLabelFont", deleteKeyCommand = self.removeCompletedFile)
@@ -403,8 +433,8 @@ class FileManager(object):
 			(self.incompleteFilesScrollList, 'right', self.uiPadding),
 			(fieldSeparator2, 'right', self.uiPadding), 
 			(fieldSeparator2, 'left', self.uiPadding),
-			(self.markAsCompleteButton, 'right', self.uiPadding),
-			(self.markAsIncompleteButton, 'left', self.uiPadding),
+			(self.markAsCompleteButton, 'left', self.uiPadding),
+			(self.markAsIncompleteButton, 'right', self.uiPadding),
 			(fieldSeparator3, 'right', self.uiPadding), 
 			(fieldSeparator3, 'left', self.uiPadding),
 			(self.completeFilesScrollList, 'left', self.uiPadding),
