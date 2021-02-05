@@ -86,6 +86,8 @@ class FileManager(object):
 		self.log('{} maya files found'.format(len(self.foundFiles)))
 		self.log('Maya files: {}'.format(self.foundFiles))
 
+		#sort files to enforce order
+		self.foundFiles.sort()
 		
 		for fileItem in self.foundFiles:
 
