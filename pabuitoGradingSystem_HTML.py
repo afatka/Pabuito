@@ -868,33 +868,41 @@ class PabuitoGradingSystem_HTML(object):
 				raise
 
 		wrapWidth = 50
-		lineSeparator = '-' * wrapWidth
-		smallLineSeparator = '-' * (wrapWidth / 2)
-		newLine = ' '
+		# lineSeparator = '-' * wrapWidth
+		lineSeparator = '<hr>'
+		# smallLineSeparator = '-' * (wrapWidth / 2)
+		smallLineSeparator = '<hr style="width:50%;margin:0">'
+		newLine = '<br>'
+		mini_break = '<hr style="width:25%;margin:0">'
+		# newLine = '\n'
 		self.log('filename: {}'.format(directoryDict['filename']))
 		self.log('text path: {}'.format(directoryDict['textDirectory']))
 		fileOutList = []
 
 		# print('\nfilename: {}\n'.format(directoryDict['filename']))
 
-		fileOutList.extend(textwrap.wrap('Grading for: {}\n'.format(directoryDict['filename'].encode('utf-8')), wrapWidth))
-		fileOutList.extend(textwrap.wrap(lineSeparator, wrapWidth))
-		fileOutList.extend(newLine)
+		# add "Grading for" title
+		fileOutList.extend(textwrap.wrap('<b>Grading for:</b> <i>{}</i>\n'.format(directoryDict['filename'].encode('utf-8')), wrapWidth))
+		# fileOutList.extend(textwrap.wrap(lineSeparator, wrapWidth))
+		# fileOutList.extend(textwrap.wrap(newLine, wrapWidth))
+		# fileOutList.extend(textwrap.wrap(newLine, wrapWidth))
 
 		#grade total  text
 		try:
 			gradeTotal_textIntro = self.xml_elementDefaults.find('total_intro').text
 			if gradeTotal_textIntro != None: 
-				# fileOutList.extend(textwrap.wrap(lineSeparator, wrapWidth))
-				fileOutList.extend(textwrap.wrap('{}{}%'.format(gradeTotal_textIntro,self.categoryGrades.gradeTotal()), wrapWidth))
+				fileOutList.extend(textwrap.wrap(lineSeparator, wrapWidth))
+				fileOutList.extend(textwrap.wrap('<b>{}</b> {}%'.format(gradeTotal_textIntro,self.categoryGrades.gradeTotal()), wrapWidth))
 		except AttributeError:
 			fileOutList.extend(textwrap.wrap('{}%\n'.format(self.categoryGrades.gradeTotal()), wrapWidth))
-		fileOutList.extend(textwrap.wrap(lineSeparator, wrapWidth))
-		fileOutList.extend(newLine)
+		# fileOutList.extend(textwrap.wrap(lineSeparator, wrapWidth))
+		# fileOutList.extend(textwrap.wrap(newLine, wrapWidth))
 
+		# grade category... maybe
 		for section in grades:
+			fileOutList.extend(textwrap.wrap(lineSeparator, wrapWidth))
 			if section[0] != 'grade_boxes_internal':
-				fileOutList.extend(textwrap.wrap('{}: {}%\n'.format(section[0],int(section[3])), wrapWidth))
+				fileOutList.extend(textwrap.wrap('<b>{}:</b> {}%\n'.format(section[0],int(section[3])), wrapWidth))
 				# fileOutList.extend(textwrap.wrap(lineSeparator, wrapWidth))
 				fileOutList.extend(textwrap.wrap(smallLineSeparator, wrapWidth))
 				# fileOutList.extend(textwrap.wrap(lineSeparator, wrapWidth))
@@ -908,9 +916,13 @@ class PabuitoGradingSystem_HTML(object):
 						pass
 						fileOutList.extend(textwrap.wrap('{}\n'.format(section[2]), wrapWidth))
 						# fileOutList.extend(textwrap.wrap(lineSeparator, wrapWidth))
+
+				# grading subcategories...?
 				for subSection in section[4]:
+					fileOutList.extend(textwrap.wrap(mini_break, wrapWidth))
 					#section title
-					fileOutList.extend(textwrap.wrap('{}\n'.format(subSection['section_title'].encode('utf-8')), wrapWidth))
+					fileOutList.extend(textwrap.wrap('<i>{}</i>'.format(subSection['section_title'].encode('utf-8')), wrapWidth))
+					fileOutList.extend(textwrap.wrap(newLine, wrapWidth))
 					# fileOutList.extend(textwrap.wrap(lineSeparator, wrapWidth))
 					#comment text
 					if subSection['comment_text'] !='':
@@ -922,7 +934,7 @@ class PabuitoGradingSystem_HTML(object):
 							pass
 						fileOutList.extend(textwrap.wrap('{}\n'.format(subSection['comment_text'].encode('utf-8')), wrapWidth))
 						# fileOutList.extend(textwrap.wrap(smallLineSeparator, wrapWidth))
-						fileOutList.extend(newLine)
+						fileOutList.extend(textwrap.wrap(newLine, wrapWidth))
 
 					#default comments text
 					if subSection['default_comments_text'] !='':
@@ -934,7 +946,7 @@ class PabuitoGradingSystem_HTML(object):
 							pass
 						fileOutList.extend(textwrap.wrap('{}\n'.format(subSection['default_comments_text'].encode('utf-8')), wrapWidth))
 						# fileOutList.extend(textwrap.wrap(smallLineSeparator, wrapWidth))
-						fileOutList.extend(newLine)
+						fileOutList.extend(textwrap.wrap(newLine, wrapWidth))
 
 					#example comments text
 					if subSection['example_comments_text'] !='':
@@ -946,22 +958,28 @@ class PabuitoGradingSystem_HTML(object):
 							pass
 						fileOutList.extend(textwrap.wrap('{}\n'.format(subSection['example_comments_text'].encode('utf-8')), wrapWidth))
 						# fileOutList.extend(textwrap.wrap(smallLineSeparator, wrapWidth))
-						fileOutList.extend(newLine)
+						fileOutList.extend(textwrap.wrap(newLine, wrapWidth))
+
+					# fileOutList.extend(textwrap.wrap(mini_break, wrapWidth))
 
 				# fileOutList.extend(textwrap.wrap(lineSeparator, wrapWidth))
+			# fileOutList.extend(textwrap.wrap(newLine, wrapWidth))
 
-		fileOutList.extend(textwrap.wrap(lineSeparator, wrapWidth))
-		fileOutList.extend(newLine)
+		# fileOutList.extend(textwrap.wrap(lineSeparator, wrapWidth))
+		# fileOutList.extend(textwrap.wrap(newLine, wrapWidth))
 
+		# grading summary
 		for section in grades:
 			if section[0] != 'grade_boxes_internal':
-				fileOutList.extend(textwrap.wrap('{}: {}%\n'.format(section[0],int(section[3])), wrapWidth))
+				fileOutList.extend(textwrap.wrap('{}: {}%'.format(section[0],int(section[3])), wrapWidth))
+				fileOutList.extend(textwrap.wrap(newLine, wrapWidth))
 			else:
-				fileOutList.extend(newLine)
+				# fileOutList.extend(textwrap.wrap(newLine, wrapWidth))
 				for box in section[4]:
 					self.log('box: \n{}'.format(box))
-					fileOutList.extend(textwrap.wrap('{}: {}%\n'.format(box['default_comments_text'], box['grade_value'])))
-				fileOutList.extend(newLine)
+					fileOutList.extend(textwrap.wrap('{}: {}%'.format(box['default_comments_text'], box['grade_value'])))
+					fileOutList.extend(textwrap.wrap(newLine, wrapWidth))
+				fileOutList.extend(textwrap.wrap(newLine, wrapWidth))
 
 		fileOutList.extend(textwrap.wrap(smallLineSeparator, wrapWidth))
 		#grade total  text
@@ -969,11 +987,12 @@ class PabuitoGradingSystem_HTML(object):
 			gradeTotal_textIntro = self.xml_elementDefaults.find('total_intro').text
 			if gradeTotal_textIntro != None: 
 				# fileOutList.extend(textwrap.wrap(lineSeparator, wrapWidth))
-				fileOutList.extend(textwrap.wrap('{}{}%'.format(gradeTotal_textIntro,self.categoryGrades.gradeTotal()), wrapWidth))
+				fileOutList.extend(textwrap.wrap('{} {}%'.format(gradeTotal_textIntro,self.categoryGrades.gradeTotal()), wrapWidth))
 		except AttributeError:
-			fileOutList.extend(textwrap.wrap('{}%\n'.format(self.categoryGrades.gradeTotal()), wrapWidth))
+			fileOutList.extend(textwrap.wrap('{}%'.format(self.categoryGrades.gradeTotal()), wrapWidth))
+			fileOutList.extend(textwrap.wrap(newLine, wrapWidth))
 
-		fileOutList.extend(['\n\n{}: {}%'.format(directoryDict['filename'][:20].encode('utf-8'), self.categoryGrades.gradeTotal())])		
+		fileOutList.extend(['{}'.format(directoryDict['filename'].encode('utf-8'), self.categoryGrades.gradeTotal())])		
 
 		with open(os.path.join(directoryDict['textDirectory'], directoryDict['filename'] + '.txt'), 'w') as f:
 		# with open(directoryDict['textDirectory'] + directoryDict['filename'] + '.txt', 'w') as f:
