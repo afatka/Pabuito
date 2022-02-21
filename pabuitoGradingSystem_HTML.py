@@ -882,7 +882,7 @@ class PabuitoGradingSystem_HTML(object):
 		# print('\nfilename: {}\n'.format(directoryDict['filename']))
 
 		# add "Grading for" title
-		fileOutList.extend(textwrap.wrap('<b>Grading for:</b> <i>{}</i>\n'.format(directoryDict['filename'].encode('utf-8')), wrapWidth))
+		fileOutList.extend(textwrap.wrap('<h3>Grading for:</h3> <em>{}</em>\n'.format(directoryDict['filename'].encode('utf-8')), wrapWidth))
 		# fileOutList.extend(textwrap.wrap(lineSeparator, wrapWidth))
 		# fileOutList.extend(textwrap.wrap(newLine, wrapWidth))
 		# fileOutList.extend(textwrap.wrap(newLine, wrapWidth))
@@ -892,7 +892,7 @@ class PabuitoGradingSystem_HTML(object):
 			gradeTotal_textIntro = self.xml_elementDefaults.find('total_intro').text
 			if gradeTotal_textIntro != None: 
 				fileOutList.extend(textwrap.wrap(lineSeparator, wrapWidth))
-				fileOutList.extend(textwrap.wrap('<b>{}</b> {}%'.format(gradeTotal_textIntro,self.categoryGrades.gradeTotal()), wrapWidth))
+				fileOutList.extend(textwrap.wrap('<h3>{}</h3> {}%'.format(gradeTotal_textIntro,self.categoryGrades.gradeTotal()), wrapWidth))
 		except AttributeError:
 			fileOutList.extend(textwrap.wrap('{}%\n'.format(self.categoryGrades.gradeTotal()), wrapWidth))
 		# fileOutList.extend(textwrap.wrap(lineSeparator, wrapWidth))
@@ -902,7 +902,7 @@ class PabuitoGradingSystem_HTML(object):
 		for section in grades:
 			fileOutList.extend(textwrap.wrap(lineSeparator, wrapWidth))
 			if section[0] != 'grade_boxes_internal':
-				fileOutList.extend(textwrap.wrap('<b>{}:</b> {}%\n'.format(section[0],int(section[3])), wrapWidth))
+				fileOutList.extend(textwrap.wrap('<h3>{}:</h3> {}%\n'.format(section[0],int(section[3])), wrapWidth))
 				# fileOutList.extend(textwrap.wrap(lineSeparator, wrapWidth))
 				fileOutList.extend(textwrap.wrap(smallLineSeparator, wrapWidth))
 				# fileOutList.extend(textwrap.wrap(lineSeparator, wrapWidth))
@@ -921,7 +921,7 @@ class PabuitoGradingSystem_HTML(object):
 				for subSection in section[4]:
 					fileOutList.extend(textwrap.wrap(mini_break, wrapWidth))
 					#section title
-					fileOutList.extend(textwrap.wrap('<i>{}</i>'.format(subSection['section_title'].encode('utf-8')), wrapWidth))
+					fileOutList.extend(textwrap.wrap('<strong>{}</strong>'.format(subSection['section_title'].encode('utf-8')), wrapWidth))
 					fileOutList.extend(textwrap.wrap(newLine, wrapWidth))
 					# fileOutList.extend(textwrap.wrap(lineSeparator, wrapWidth))
 					#comment text
