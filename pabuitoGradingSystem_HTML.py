@@ -22,7 +22,7 @@ reload(category_class)
 reload(fileManagerFile)
 
 
-class PabuitoGradingSystem(object):
+class PabuitoGradingSystem_HTML(object):
 
 	def __init__(self, xmlFileLocation):
 
